@@ -60,7 +60,7 @@ if (not((A==np.eye(N)).all())):
 Pour le schema explicite decentre amont
 """
 # Construction de la matrice d'iteration
-Kd= 1/(2*dx)*(-np.diag([1]*(N-1),-1) + np.eye(N))
+Kd= 1/(dx)*(-np.diag([1]*(N-1),-1) + np.eye(N))
 ItMat=np.eye(N)-V*dt*Kd
 
 # Initialisation des vecteurs a tracer : coordonnees d'espace et concentration du polluant
