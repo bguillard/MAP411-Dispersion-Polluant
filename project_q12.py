@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Dec 26 10:22:20 2016
+Created on Mon Dec 26 13:44:06 2016
 
 @author: benoitguillard
 
-====QUESTION 11====
+====QUESTION 12====
 
-Equation de convection diffusion bi-dimensionnelle
+Equation de convection diffusion bi-dimensionnelle, avec terme source
 """
 
 # Importation des bibliotheques nécessaires
@@ -22,14 +22,14 @@ plt.rcParams['animation.ffmpeg_path'] = '/Users/benoitguillard/anaconda2/ffmpeg/
 
 
 # Constantes numeriques pour la simulation
-nu=1		# Coefficient de diffusion
+nu=0.1		# Coefficient de diffusion
 L=50		# Distance caracteristique considérée
 T=10		# Durée de la simulation
-h=2		# Pas de discretisation en espace
+h=0.5		# Pas de discretisation en espace
 dt=0.1	# Pas de discretisation en temps
 
 x0=25		# Constantes decrivant l'etat initial
-y0=25
+y0=0
 sigma=1
 
 N=int(L*1/h-1)	# Taille de la maille dans une direction
@@ -87,20 +87,23 @@ def matToVect(m):
 			ans[(i-1)*N+j]=m[i][j]
 	return ans
 
-# Fonction decrivant l'état initial :
+# Fonction decrivant le terme source :
 def f0(x,y):
 	return 1.0/(sigma*np.sqrt(2*np.pi))*np.exp(-(((x-x0)**2)+((y-y0)**2))/(2*sigma**2))
 
-# Etat initial :
-# Vecteur source :
+# Vecteur des concentrations :
 U=np.array([0.0]*N**2)
+
+# Vecteur source :
+Source=np.array([0.0]*N**2)
 for i in range(N):
 	for j in range(N):
-		U[(i-1)*N+j]=f0(axe[i],axe[j])
+		Source[(i-1)*N+j]=f0(axe[i],axe[j])
+Source=dt*Source
 
 # Creation de la figure
 fig = plt.figure(figsize=(17, 10), dpi=80)
-fig.suptitle('Q11 : Convection diffusion bi-dimensionnelle', fontsize=14, fontweight='bold')
+fig.suptitle('Q12 : Convection diffusion bi-dimensionnelle avec source', fontsize=14, fontweight='bold')
 ax = plt.axes(xlim=(0, 50), ylim=(0, 50), zlim=(0,0.2) , projection='3d')
 
 # Etiquettage des axes
@@ -126,7 +129,7 @@ def animate(i):
 	ax.set_zlabel("Concentration en polluant")
 	nbrIter+=1				# Incrementation du nombre d'iterations
 	# Iteration par resolution du systeme linéaire
-	T=lnlg.solve_triangular(B,sparseD.dot(U) , check_finite=False, lower=True)
+	T=lnlg.solve_triangular(B,sparseD.dot(U) + Source , check_finite=False, lower=True)
 	U=lnlg.solve_triangular(H,T, check_finite=False)
 	surf = ax.plot_wireframe(X, Y, vectToMat(U), lw=0.5, color='r')
 	ax.set_zlim(0,0.2)

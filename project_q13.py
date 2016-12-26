@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Dec 26 10:22:20 2016
+Created on Mon Dec 26 14:27:58 2016
 
 @author: benoitguillard
 
-====QUESTION 11====
+====QUESTION 13====
 
-Equation de convection diffusion bi-dimensionnelle
+Equation de convection diffusion bi-dimensionnelle, avec terme source
+Et un courant non uniforme
 """
 
 # Importation des bibliotheques nécessaires
@@ -22,15 +23,18 @@ plt.rcParams['animation.ffmpeg_path'] = '/Users/benoitguillard/anaconda2/ffmpeg/
 
 
 # Constantes numeriques pour la simulation
-nu=1		# Coefficient de diffusion
+nu=0.1		# Coefficient de diffusion
 L=50		# Distance caracteristique considérée
 T=10		# Durée de la simulation
-h=2		# Pas de discretisation en espace
+h=0.5	 	# Pas de discretisation en espace
 dt=0.1	# Pas de discretisation en temps
 
 x0=25		# Constantes decrivant l'etat initial
-y0=25
+y0=0
 sigma=1
+
+k=3		# Constantes definissant le courant
+l=5
 
 N=int(L*1/h-1)	# Taille de la maille dans une direction
 
@@ -48,18 +52,24 @@ Kcy=1.0/(2*h) * (np.diag([1]*(N**2-1),1) - np.diag([1]*(N**2-1),-1))
 
 Kcx=1.0/(2*h) * (np.diag([1]*(N**2-N),N) - np.diag([1]*(N**2-N),-N))
 
+# Modification de Kcy et Kcx pour prendre en compte les courants
+for i in range(N):
+	for j in range(N):
+		Kcy[(i-1)*N+j]=Kcy[(i-1)*N+j] * np.cos(1.0*l*np.pi*axe[i]/L) * np.sin(1.0*k*np.pi*axe[j]/L)
+		Kcx[(i-1)*N+j]=Kcx[(i-1)*N+j] * np.sin(1.0*l*np.pi*axe[i]/L) * np.cos(1.0*k*np.pi*axe[j]/L)
+
 G=np.eye(N**2) + 0.5*dt* (Kcx+Kcy) - 0.5*nu*dt* A
 D=np.eye(N**2) - 0.5*dt* (Kcx+Kcy) + 0.5*nu*dt* A
 
 
 # Conditions aux bord :
-l=[0]*(N**2)
+fillingList=[0]*(N**2)
 for i in range(N):
 	for j in [i,N**2-1-i,i*N,(i+1)*N-1]:
-		D[j]=l
-		l[j]=1
-		G[j]=l
-		l[j]=0
+		D[j]=fillingList
+		fillingList[j]=1
+		G[j]=fillingList
+		fillingList[j]=0
 
 # Preparation des matrices LU sur celle de gauche, creuse pour celle de droite
 P,B,H = lnlg.lu(G)
@@ -87,20 +97,23 @@ def matToVect(m):
 			ans[(i-1)*N+j]=m[i][j]
 	return ans
 
-# Fonction decrivant l'état initial :
+# Fonction decrivant le terme source :
 def f0(x,y):
 	return 1.0/(sigma*np.sqrt(2*np.pi))*np.exp(-(((x-x0)**2)+((y-y0)**2))/(2*sigma**2))
 
-# Etat initial :
-# Vecteur source :
+# Vecteur des concentrations :
 U=np.array([0.0]*N**2)
+
+# Vecteur source :
+Source=np.array([0.0]*N**2)
 for i in range(N):
 	for j in range(N):
-		U[(i-1)*N+j]=f0(axe[i],axe[j])
+		Source[(i-1)*N+j]=f0(axe[i],axe[j])
+Source=dt*Source
 
 # Creation de la figure
 fig = plt.figure(figsize=(17, 10), dpi=80)
-fig.suptitle('Q11 : Convection diffusion bi-dimensionnelle', fontsize=14, fontweight='bold')
+fig.suptitle('Q12 : Convection diffusion bi-dimensionnelle avec source', fontsize=14, fontweight='bold')
 ax = plt.axes(xlim=(0, 50), ylim=(0, 50), zlim=(0,0.2) , projection='3d')
 
 # Etiquettage des axes
@@ -114,7 +127,6 @@ surf = ax.plot_wireframe(X, Y, vectToMat(U), lw=0.5, color='r')
 nbrIter=0
 
 
-
 # Fonction a iterer pour animer la figure
 def animate(i):
 	global nbrIter
@@ -126,7 +138,7 @@ def animate(i):
 	ax.set_zlabel("Concentration en polluant")
 	nbrIter+=1				# Incrementation du nombre d'iterations
 	# Iteration par resolution du systeme linéaire
-	T=lnlg.solve_triangular(B,sparseD.dot(U) , check_finite=False, lower=True)
+	T=lnlg.solve_triangular(B,sparseD.dot(U) + Source , check_finite=False, lower=True)
 	U=lnlg.solve_triangular(H,T, check_finite=False)
 	surf = ax.plot_wireframe(X, Y, vectToMat(U), lw=0.5, color='r')
 	ax.set_zlim(0,0.2)
