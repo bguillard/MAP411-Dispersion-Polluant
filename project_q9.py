@@ -4,7 +4,7 @@ Created on Sun Dec 25 20:48:42 2016
 
 @author: benoitguillard
 
-====QUESTION 8====
+====QUESTION 9====
 
 Discretisation du Laplacien a 2 dimensions
 """
@@ -13,6 +13,9 @@ Discretisation du Laplacien a 2 dimensions
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy import linalg as lnlg
+from scipy.sparse import dia_matrix
+import time
 
 
 # Constantes numeriques pour la simulation
@@ -77,3 +80,39 @@ surf = ax.plot_wireframe(X, Y, vectToMat(F), lw=1, color='r')
 # Resolution du systeme lineaire
 U=np.linalg.solve(-A,F)
 surf = ax.plot_wireframe(X, Y, vectToMat(U), lw=1)
+
+"""
+Test de différentes méthodes de stockage/résolution
+Conclusion :
+ Le plus rapide est d'utiliser la methode LU pour decomposer la matrice de gauche 
+	de l'equation
+	ET de stocker celle de droite sous forme d'une matrice creuse diagonale (dia_matrix)
+"""
+
+def resolNormal():
+	for i in range(1000):
+		U=np.linalg.solve(-A,F)
+	return  U
+
+def resolTriangular():
+	P,B,H=lnlg.lu(A)
+	start_time = time.time()     
+	for i in range(1000):
+		Y=lnlg.solve_triangular(B,-np.dot(A,F) , check_finite=False, lower=True)
+		U=lnlg.solve_triangular(H,Y, check_finite=False)
+	interval = time.time() - start_time  
+	print 'Total time in seconds:', interval 
+	return U
+
+def resolTriangularSparse():
+	P,B,H=lnlg.lu(A)
+	sparseA=dia_matrix(A)
+	start_time = time.time()
+	for i in range(1000):
+		Y=lnlg.solve_triangular(B,-sparseA.dot(F) , check_finite=False, lower=True)
+		U=lnlg.solve_triangular(H,Y, check_finite=False)
+	interval = time.time() - start_time  
+	print 'Total time in seconds:', interval
+	return U
+
+
